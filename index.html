@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDB: 내 안의 캐릭터 찾기</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
+    <link rel="stylesheet" href="./src/style.css">
+</head>
+
+<body>
+
+    <div class="background-fx"></div>
+
+    <div class="container glass-panel">
+        <section id="section-start" class="section active">
+            <div class="logo-wrapper">
+                <h1 class="logo">SOUL TWIN FINDER</h1>
+                <div class="sub-text">내 영혼의 도플갱어 찾기</div>
+            </div>
+
+            <div class="desc-box glass-inner">
+                <p>내 무의식 속 성향을 분석해서<br>
+                    수만 명의 캐릭터 중 <strong>나와 영혼까지 닮은</strong><br>
+                    <span class="highlight">도플갱어 캐릭터</span>를 찾아드립니다.
+                </p>
+
+                <div class="instruction">
+                    <span class="system-label">진행 방법</span><br>
+                    질문에 동의하는 만큼 <span class="highlight">YES 또는 NO 버튼</span>을 눌러주세요.<br>
+                    완전 그렇다면 YES만 20번!<br>애매하다면 YES와 NO를 섞어서 두드리세요.
+                </div>
+            </div>
+
+            <button class="btn-primary glow-effect" onclick="game.start()">테스트 시작하기</button>
+        </section>
+
+        <section id="section-test" class="section">
+            <div class="top-bar">
+                <span id="q-num">진행 상황</span>
+                <div class="mini-progress">
+                    <div class="mini-fill" id="total-progress"></div>
+                </div>
+            </div>
+
+            <div class="question-card glass-inner" id="question-text">로딩 중...</div>
+
+            <div class="charge-container">
+                <div class="charge-label">
+                    <span>나의 확신도</span>
+                    <span id="charge-percent">0%</span>
+                </div>
+                <div class="charge-track">
+                    <div class="charge-bar" id="charge-bar"></div>
+                </div>
+                <div class="charge-msg" id="charge-msg">YES와 NO를 섞어 <strong>총 20번</strong> 두드리세요.</div>
+            </div>
+
+            <div class="btn-grid">
+                <button class="tap-btn btn-yes" onpointerdown="game.handleTap(1)">
+                    YES<br><span>(두드리기!)</span>
+                </button>
+                <button class="tap-btn btn-no" onpointerdown="game.handleTap(-1)">
+                    NO<br><span>(두드리기!)</span>
+                </button>
+            </div>
+        </section>
+
+        <section id="section-unlock" class="section">
+            <h2 class="section-title">분석 완료!</h2>
+            <p class="section-desc">당신의 성향 코드가 나왔습니다.</p>
+
+            <div class="dna-card glass-inner">
+                <div class="dna-row">
+                    <span class="dna-label">MBTI</span>
+                    <span class="dna-value highlight" id="unlock-mbti">----</span>
+                </div>
+                <div class="dna-row">
+                    <span class="dna-label">핵심 욕구</span>
+                    <span class="dna-value" id="unlock-ennea">---</span>
+                </div>
+                <div class="dna-row">
+                    <span class="dna-label">타고난 기질</span>
+                    <span class="dna-value small" id="unlock-temp">---</span>
+                </div>
+            </div>
+
+            <div class="pdb-link-box glass-inner">
+                <p id="pdb-msg" class="pdb-msg">
+                    누구랑 가장 닮았을까요?<br>
+                    <strong>아래 버튼을 20번 두드려서</strong> 확인하세요!
+                </p>
+                <button class="btn-unlock" onpointerdown="game.scanDatabase()">
+                    <span class="btn-content">결과 잠금 해제 (Tap!)</span>
+                    <div class="unlock-gauge" id="pdb-gauge"></div>
+                </button>
+            </div>
+        </section>
+
+        <section id="section-final" class="section">
+            <div class="result-label">가장 닮은 캐릭터</div>
+
+            <div class="match-card glass-inner">
+                <div class="char-img-wrapper">
+                    <img id="final-img" src="" alt="Character Image" class="char-img-real">
+                </div>
+
+                <div class="char-info">
+                    <div class="char-name" id="final-name">캐릭터 이름</div>
+                    <div class="char-source" id="final-source">출연 작품</div>
+                </div>
+
+                <div class="click-hint">👇 궁금한 태그를 눌러서 더 자세히 보세요 👇</div>
+
+                <div class="char-tags">
+                    <span class="tag" id="tag-mbti">MBTI</span>
+                    <span class="tag" id="tag-ennea">성격유형</span>
+                    <span class="tag" id="tag-temp">기질</span>
+                </div>
+
+                <div class="char-desc" id="final-desc">설명 대기 중...</div>
+            </div>
+
+            <div class="link-unlock-area">
+                <div class="link-msg" id="link-msg">태그를 누르면 상세 페이지로 연결됩니다</div>
+                <button class="btn-primary glow-effect disabled" id="btn-link-unlock" onpointerdown="game.unlockLink()">
+                    데이터 전송 대기
+                    <div class="btn-fill" id="link-fill"></div>
+                </button>
+            </div>
+
+            <div class="stats-info">
+                내가 두드린 총 횟수: <span id="total-clicks" class="highlight">0</span>회
+            </div>
+
+            <button class="btn-text" onclick="location.reload()">처음부터 다시 하기</button>
+        </section>
+    </div>
+    <script src="https://clickbattle2025.web.app/click-battle.js"></script>
+    <script src="./src/script.js"></script>
+
+</body>
+
+</html>
