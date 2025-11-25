@@ -33,8 +33,19 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    /* ▼▼▼ [수정됨] 스크롤 및 확대/팅김 방지 강화 ▼▼▼ */
     overflow: hidden;
+    /* 스크롤바 숨김 */
     user-select: none;
+    /* 텍스트 선택 방지 (꾹 눌렀을 때 파란 블록) */
+    overscroll-behavior: none;
+    /* [중요] 모바일 고무줄 팅김 효과 제거 */
+    -webkit-user-select: none;
+    /* 사파리 호환 */
+    -webkit-touch-callout: none;
+    /* iOS 꾹 눌렀을 때 팝업 메뉴 방지 */
+    touch-action: pan-y;
+    /* 수직 스크롤은 허용하되 확대/축소 제스처 무시 */
     line-height: 1.5;
 }
 
