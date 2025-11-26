@@ -364,9 +364,3 @@ const game = {
         playSound('tap'); if (navigator.vibrate) navigator.vibrate(5);
     }
 };
-
-/* --- [추가] 모든 터치/클릭 감지 및 기록 --- */
-// 화면의 어디를 누르든(터치하든) 무조건 기록됩니다.
-window.addEventListener("pointerdown", function () {
-    ClickBattle.recordClick();
-});
