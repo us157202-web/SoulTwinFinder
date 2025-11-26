@@ -1,4 +1,4 @@
-ClickBattle.init("SHU"); // 자기 닉네임
+
 
 
 
