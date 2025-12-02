@@ -4,144 +4,780 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PDB: 내 안의 캐릭터 찾기</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css">
-    <link rel="stylesheet" href="./src/style.css">
+    <title>폭신폭신 계단 (UI 최적화)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Gamja+Flower&display=swap" rel="stylesheet">
     <script src="https://clickbattle2025.web.app/click-battle.js"></script>
     <script>ClickBattle.init("SHU");</script>
+    <style>
+        :root {
+            --bg-color: #F0F4C3;
+            --primary: #FF8A65;
+            --secondary: #4DD0E1;
+            --ui-bg: rgba(255, 255, 255, 0.95);
+            --text: #5D4037;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            font-family: 'Gamja Flower', cursive;
+            touch-action: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: var(--text);
+        }
+
+        #game-wrapper {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            max-width: 500px;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.1);
+        }
+
+        canvas {
+            flex: 1;
+            width: 100%;
+            background: #E0F7FA;
+            cursor: pointer;
+        }
+
+        /* === HUD (점수, 코인, 상점버튼) === */
+        .hud {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            /* 위쪽 정렬 */
+            pointer-events: none;
+            /* 클릭 통과 */
+            z-index: 10;
+        }
+
+        .score-box {
+            font-size: 28px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+        }
+
+        /* 우측 상단 컨테이너 (코인 + 상점버튼) */
+        .right-hud {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+            /* 코인과 상점 버튼 사이 간격 */
+            pointer-events: auto;
+            /* 여기는 클릭 가능해야 함 */
+        }
+
+        .coin-box {
+            font-size: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 5px 12px;
+            border-radius: 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+
+        /* 상점 버튼 (코인 바로 아래) */
+        .mini-shop-btn {
+            background: #8D6E63;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 5px 12px;
+            font-family: 'Gamja Flower', cursive;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 3px 0 #5D4037;
+            transition: transform 0.1s;
+        }
+
+        .mini-shop-btn:active {
+            transform: translateY(3px);
+            box-shadow: none;
+        }
+
+        /* 컨트롤 영역 */
+        .controls-area {
+            height: 200px;
+            background: white;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 0 10px;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.05);
+            z-index: 20;
+            padding-bottom: 50px;
+            box-sizing: border-box;
+        }
+
+        .btn-game {
+            width: 45%;
+            height: 80px;
+            border-radius: 20px;
+            border: none;
+            font-family: 'Gamja Flower', cursive;
+            font-size: 22px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2);
+            transition: transform 0.05s, box-shadow 0.05s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-turn {
+            background-color: var(--secondary);
+            box-shadow: 0 6px 0 #0097A7;
+        }
+
+        .btn-climb {
+            background-color: var(--primary);
+            box-shadow: 0 6px 0 #D84315;
+        }
+
+        .btn-game.pressed {
+            transform: translateY(6px);
+            box-shadow: none !important;
+        }
+
+        .btn-icon {
+            font-size: 28px;
+            margin-bottom: -2px;
+        }
+
+        /* 팝업 공통 */
+        .popup {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            backdrop-filter: blur(5px);
+        }
+
+        .popup-content {
+            background: var(--ui-bg);
+            width: 85%;
+            max-width: 340px;
+            padding: 25px;
+            border-radius: 30px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* 게임 오버 결과창 (심플하게) */
+        .game-over-box {
+            pointer-events: none;
+            /* 클릭 통과 (상점 버튼 누를 수 있게) */
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            width: 100%;
+            z-index: 40;
+            text-shadow: 2px 2px 0px #fff;
+        }
+
+        .game-over-text {
+            font-size: 50px;
+            color: #FF5252;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .game-over-score {
+            font-size: 30px;
+            color: #5D4037;
+            margin-bottom: 20px;
+        }
+
+        /* 다시하기 버튼 (중앙) */
+        .retry-btn {
+            pointer-events: auto;
+            background: #FF8A65;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-size: 24px;
+            font-family: 'Gamja Flower', cursive;
+            box-shadow: 0 6px 0 #D84315;
+            cursor: pointer;
+            transition: 0.1s;
+            margin-top: 10px;
+        }
+
+        .retry-btn:active {
+            transform: translateY(6px);
+            box-shadow: none;
+        }
+
+        /* 상점 리스트 */
+        .shop-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-top: 20px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .shop-item {
+            background: #FFF8E1;
+            padding: 5px;
+            border-radius: 15px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shop-item.active {
+            border-color: var(--primary);
+            background: #FFF;
+            box-shadow: 0 0 10px var(--primary);
+        }
+
+        .shop-item.locked {
+            opacity: 0.5;
+            filter: grayscale(1);
+        }
+
+        .shop-item-icon {
+            font-size: 28px;
+        }
+
+        .shop-item-name {
+            font-size: 14px;
+            font-weight: bold;
+            margin: 2px 0;
+        }
+
+        .shop-item-price {
+            font-size: 12px;
+            color: #777;
+        }
+    </style>
 </head>
 
 <body>
 
-    <div class="background-fx"></div>
+    <div id="game-wrapper">
+        <div class="hud">
+            <div class="score-box">🏆 <span id="score">0</span></div>
 
-    <div class="container glass-panel">
-        <section id="section-start" class="section active">
-            <div class="logo-wrapper">
-                <h1 class="logo">SOUL TWIN FINDER</h1>
-                <div class="sub-text">내 영혼의 도플갱어 찾기</div>
+            <div class="right-hud">
+                <div class="coin-box">💰 <span id="coins">0</span></div>
+                <button class="mini-shop-btn" id="hudShopBtn" onclick="openShop()">🏠 상점</button>
             </div>
+        </div>
 
-            <div class="desc-box glass-inner">
-                <p>내 무의식 속 성향을 분석해서<br>
-                    수만 명의 캐릭터 중 <strong>나와 영혼까지 닮은</strong><br>
-                    <span class="highlight">도플갱어 캐릭터</span>를 찾아드립니다.
-                </p>
-
-                <div class="instruction">
-                    <span class="system-label">진행 방법</span><br>
-                    질문에 동의하는 만큼 <span class="highlight">YES 또는 NO 버튼</span>을 눌러주세요.<br>
-                    완전 그렇다면 YES만 20번!<br>애매하다면 YES와 NO를 섞어서 두드리세요.
-                </div>
+        <div id="gameOverLayer" class="hidden"
+            style="position:absolute; width:100%; height:100%; top:0; left:0; z-index:30; background:rgba(255,255,255,0.3);">
+            <div class="game-over-box">
+                <h1 class="game-over-text">이런 실수!</h1>
+                <div class="game-over-score">점수: <span id="finalScore">0</span></div>
+                <button class="retry-btn" onclick="retryGame()">🔄 다시하기</button>
             </div>
+        </div>
 
-            <button class="btn-primary glow-effect" onclick="game.start()">테스트 시작하기</button>
-        </section>
+        <canvas id="gameCanvas"></canvas>
 
-        <section id="section-test" class="section">
-            <div class="top-bar">
-                <span id="q-num">진행 상황</span>
-                <div class="mini-progress">
-                    <div class="mini-fill" id="total-progress"></div>
-                </div>
+        <div class="controls-area">
+            <button class="btn-game btn-turn" id="btnTurn">
+                <span class="btn-icon">↩️</span>
+                방향전환
+            </button>
+            <button class="btn-game btn-climb" id="btnClimb">
+                <span class="btn-icon">🏃</span>
+                오르기
+            </button>
+        </div>
+
+        <div id="shopScreen" class="popup hidden">
+            <div class="popup-content">
+                <h2>🛍️ 스타일 상점</h2>
+                <p>보유 코인: <span id="shopCoins">0</span></p>
+                <div class="shop-grid" id="shopList"></div>
+                <button onclick="closeShop()"
+                    style="background:#B0BEC5; border:none; padding:10px 30px; border-radius:30px; font-size:20px; margin-top:15px; font-family:inherit; cursor:pointer;">닫기</button>
             </div>
-
-            <div class="question-card glass-inner" id="question-text">로딩 중...</div>
-
-            <div class="charge-container">
-                <div class="charge-label">
-                    <span>나의 확신도</span>
-                    <span id="charge-percent">0%</span>
-                </div>
-                <div class="charge-track">
-                    <div class="charge-bar" id="charge-bar"></div>
-                </div>
-                <div class="charge-msg" id="charge-msg">YES와 NO를 섞어 <strong>총 20번</strong> 두드리세요.</div>
-            </div>
-
-            <div class="btn-grid">
-                <button class="tap-btn btn-yes" onpointerdown="game.handleTap(1)">
-                    YES<br><span>(두드리기!)</span>
-                </button>
-                <button class="tap-btn btn-no" onpointerdown="game.handleTap(-1)">
-                    NO<br><span>(두드리기!)</span>
-                </button>
-            </div>
-        </section>
-
-        <section id="section-unlock" class="section">
-            <h2 class="section-title">분석 완료!</h2>
-            <p class="section-desc">당신의 성향 코드가 나왔습니다.</p>
-
-            <div class="dna-card glass-inner">
-                <div class="dna-row">
-                    <span class="dna-label">MBTI</span>
-                    <span class="dna-value highlight" id="unlock-mbti">----</span>
-                </div>
-                <div class="dna-row">
-                    <span class="dna-label">핵심 욕구</span>
-                    <span class="dna-value" id="unlock-ennea">---</span>
-                </div>
-                <div class="dna-row">
-                    <span class="dna-label">타고난 기질</span>
-                    <span class="dna-value small" id="unlock-temp">---</span>
-                </div>
-            </div>
-
-            <div class="pdb-link-box glass-inner">
-                <p id="pdb-msg" class="pdb-msg">
-                    누구랑 가장 닮았을까요?<br>
-                    <strong>아래 버튼을 20번 두드려서</strong> 확인하세요!
-                </p>
-                <button class="btn-unlock" onpointerdown="game.scanDatabase()">
-                    <span class="btn-content">결과 잠금 해제 (Tap!)</span>
-                    <div class="unlock-gauge" id="pdb-gauge"></div>
-                </button>
-            </div>
-        </section>
-
-        <section id="section-final" class="section">
-            <div class="result-label">가장 닮은 캐릭터</div>
-
-            <div class="match-card glass-inner">
-                <div class="char-img-wrapper">
-                    <img id="final-img" src="" alt="Character Image" class="char-img-real">
-                </div>
-
-                <div class="char-info">
-                    <div class="char-name" id="final-name">캐릭터 이름</div>
-                    <div class="char-source" id="final-source">출연 작품</div>
-                </div>
-
-                <div class="click-hint">👇 궁금한 태그를 눌러서 더 자세히 보세요 👇</div>
-
-                <div class="char-tags">
-                    <span class="tag" id="tag-mbti">MBTI</span>
-                    <span class="tag" id="tag-ennea">성격유형</span>
-                    <span class="tag" id="tag-temp">기질</span>
-                </div>
-
-                <div class="char-desc" id="final-desc">설명 대기 중...</div>
-            </div>
-
-            <div class="link-unlock-area">
-                <div class="link-msg" id="link-msg">태그를 누르면 상세 페이지로 연결됩니다</div>
-                <button class="btn-primary glow-effect disabled" id="btn-link-unlock" onpointerdown="game.unlockLink()">
-                    데이터 전송 대기
-                    <div class="btn-fill" id="link-fill"></div>
-                </button>
-            </div>
-
-            <div class="stats-info">
-                내가 두드린 총 횟수: <span id="total-clicks" class="highlight">0</span>회
-            </div>
-
-            <button class="btn-text" onclick="location.reload()">처음부터 다시 하기</button>
-        </section>
+        </div>
     </div>
 
-    <script src="./src/script.js"></script>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
+        let dpr = window.devicePixelRatio || 1;
+        let canvasWidth, canvasHeight;
+
+        function resize() {
+            const wrapper = document.getElementById('game-wrapper');
+            canvasWidth = wrapper.clientWidth;
+            canvasHeight = wrapper.clientHeight - 200;
+            canvas.width = canvasWidth * dpr;
+            canvas.height = canvasHeight * dpr;
+            ctx.scale(dpr, dpr);
+            canvas.style.width = `${canvasWidth}px`;
+            canvas.style.height = `${canvasHeight}px`;
+            initBackground();
+        }
+        window.addEventListener('resize', resize);
+
+        // 게임 상태: READY(시작전), PLAYING(게임중), GAMEOVER(죽음)
+        let gameState = 'READY';
+        let score = 0;
+        let coins = parseInt(localStorage.getItem('myCoins')) || 0;
+        let bestScore = parseInt(localStorage.getItem('bestScore')) || 0;
+
+        let player = { x: 0, y: 0, dir: 1 };
+        let stairs = [];
+        let cameraX = 0;
+        let cameraY = 0;
+
+        const STAIR_WIDTH = 40;
+        const STAIR_HEIGHT = 30;
+
+        // 가격 바꾸는 곳
+        const skins = [
+            { id: 0, icon: '🐶', name: '와리', price: 0, unlocked: true },
+            { id: 1, icon: '🐱', name: '먐미', price: 10, unlocked: false },
+            { id: 2, icon: '🐰', name: '꺵충이', price: 30, unlocked: false },
+            { id: 3, icon: '🐥', name: '뺙이', price: 50, unlocked: false },
+            { id: 4, icon: '🦊', name: '뽂스', price: 100, unlocked: false },
+            { id: 5, icon: '🐸', name: '깨구리', price: 150, unlocked: false },
+            { id: 6, icon: '🐷', name: '꾸구리', price: 200, unlocked: false },
+            { id: 7, icon: '🐼', name: '쿵후', price: 300, unlocked: false },
+            { id: 8, icon: '🦄', name: '전설마', price: 400, unlocked: false },
+            { id: 9, icon: '🐲', name: '청룡', price: 500, unlocked: false },
+            { id: 10, icon: '👽', name: '왹져', price: 1000, unlocked: false },
+            { id: 11, icon: '💩', name: '응아', price: 3000, unlocked: false },
+        ];
+
+        let currentSkinIdx = parseInt(localStorage.getItem('equippedSkin')) || 0;
+        let unlockedSkins = JSON.parse(localStorage.getItem('unlockedSkins')) || [0];
+
+        const els = {
+            score: document.getElementById('score'),
+            coins: document.getElementById('coins'),
+            gameOverLayer: document.getElementById('gameOverLayer'),
+            finalScore: document.getElementById('finalScore'),
+            shop: document.getElementById('shopScreen'),
+            shopCoins: document.getElementById('shopCoins'),
+            hudShopBtn: document.getElementById('hudShopBtn')
+        };
+        els.coins.innerText = coins;
+
+        let bgElements = [];
+        function initBackground() {
+            bgElements = [];
+            for (let i = 0; i < 15; i++) {
+                bgElements.push({
+                    x: Math.random() * canvasWidth,
+                    y: Math.random() * canvasHeight,
+                    radius: Math.random() * 40 + 20,
+                    speedX: (Math.random() - 0.5) * 0.5,
+                    speedY: (Math.random() - 0.5) * 0.3,
+                    color: `rgba(255, 255, ${Math.random() * 100 + 150}, ${Math.random() * 0.15 + 0.05})`
+                });
+            }
+        }
+
+        function updateAndDrawBackground() {
+            let grd = ctx.createLinearGradient(0, 0, 0, canvasHeight);
+            grd.addColorStop(0, "#E0F7FA");
+            grd.addColorStop(1, "#FFFDE7");
+            ctx.fillStyle = grd;
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+            bgElements.forEach(el => {
+                el.x += el.speedX;
+                el.y += el.speedY;
+                if (el.x < -el.radius) el.x = canvasWidth + el.radius;
+                if (el.x > canvasWidth + el.radius) el.x = -el.radius;
+                if (el.y < -el.radius) el.y = canvasHeight + el.radius;
+                if (el.y > canvasHeight + el.radius) el.y = -el.radius;
+
+                ctx.beginPath();
+                ctx.arc(el.x, el.y, el.radius, 0, Math.PI * 2);
+                ctx.fillStyle = el.color;
+                ctx.fill();
+            });
+        }
+
+        // 게임 초기화 (준비 상태)
+        function initGame() {
+            score = 0;
+            els.score.innerText = 0;
+            stairs = [];
+
+            let cx = 0, cy = 0;
+            let prevDir = 1;
+
+            for (let i = 0; i < 50; i++) {
+                addStair(cx, cy);
+                if (i > 5 && Math.random() < 0.4) prevDir *= -1;
+                cx += (prevDir * STAIR_WIDTH);
+                cy -= STAIR_HEIGHT;
+            }
+
+            player.x = stairs[0].x - STAIR_WIDTH;
+            player.y = stairs[0].y + STAIR_HEIGHT;
+            player.dir = 1;
+            player.idx = -1;
+
+            cameraX = player.x;
+            cameraY = player.y;
+
+            // UI 초기화
+            els.gameOverLayer.classList.add('hidden');
+            els.hudShopBtn.style.opacity = "1"; // 상점 버튼 활성화
+            els.hudShopBtn.style.pointerEvents = "auto";
+
+            gameState = 'READY';
+            loop();
+        }
+
+        function retryGame() {
+            initGame();
+        }
+
+        function addStair(x, y) {
+            let hasCoin = Math.random() < 0.1;
+            let hasJewel = (!hasCoin && Math.random() < 0.02);
+            stairs.push({ x, y, hasCoin, hasJewel });
+        }
+
+        function handleAction(action) {
+            // 게임 시작 전이면 시작
+            if (gameState === 'READY') {
+                gameState = 'PLAYING';
+                els.hudShopBtn.style.opacity = "0.5";
+                els.hudShopBtn.style.pointerEvents = "none";
+            }
+
+            if (gameState !== 'PLAYING') return;
+
+            const nextStair = stairs[player.idx + 1];
+
+            if (action === 'TURN') player.dir *= -1;
+
+            let nextX = player.x + (player.dir * STAIR_WIDTH);
+
+            // 판정 로직
+            if (Math.abs(nextX - nextStair.x) < 5) {
+                // 성공: 이동 및 점수
+                player.x = nextStair.x;
+                player.y = nextStair.y;
+                player.idx++;
+                score++;
+                els.score.innerText = score;
+
+                // 🟡 일반 코인 획득
+                if (nextStair.hasCoin) {
+                    coins++;
+                    nextStair.hasCoin = false;
+                    els.coins.innerText = coins;
+                    createParticle(player.x, player.y, "💰", "#FFD700");
+                }
+
+                // 💎 [수정됨] 대박 보석 획득 로직!
+                if (nextStair.hasJewel) {
+                    // 1. 보상 목록 설정
+                    const rewards = [10, 30, 50, 100];
+                    // 2. 랜덤 뽑기
+                    const bonus = rewards[Math.floor(Math.random() * rewards.length)];
+
+                    coins += bonus;
+                    nextStair.hasJewel = false;
+                    els.coins.innerText = coins;
+
+                    // 3. 이펙트 (100코인은 특별하게)
+                    if (bonus === 100) {
+                        createParticle(player.x, player.y - 50, "🎉대박!!", "#FF4081");
+                        createParticle(player.x, player.y - 20, `+${bonus}`, "#FF4081");
+                    } else {
+                        createParticle(player.x, player.y - 20, `+${bonus}`, "#29B6F6");
+                    }
+                    createParticle(player.x, player.y, "💎", "#29B6F6", 2.0);
+                }
+
+                // 다음 계단 생성
+                const last = stairs[stairs.length - 1];
+                let nextDir = (stairs[stairs.length - 1].x - stairs[stairs.length - 2].x) > 0 ? 1 : -1;
+                if (Math.random() < 0.4) nextDir *= -1;
+                addStair(last.x + (nextDir * STAIR_WIDTH), last.y - STAIR_HEIGHT);
+
+            } else {
+                gameOver();
+            }
+        }
+
+        function gameOver() {
+            gameState = 'GAMEOVER';
+            localStorage.setItem('myCoins', coins);
+            if (score > bestScore) {
+                bestScore = score;
+                localStorage.setItem('bestScore', bestScore);
+            }
+
+            els.finalScore.innerText = score;
+            els.gameOverLayer.classList.remove('hidden');
+
+            // 게임 오버 상태에선 다시 상점 버튼 활성화
+            els.hudShopBtn.style.opacity = "1";
+            els.hudShopBtn.style.pointerEvents = "auto";
+        }
+
+        let particles = [];
+        function createParticle(x, y, text, color, lifeStart = 1.0) {
+            particles.push({ x, y, text, color, life: lifeStart, dy: -1.5 });
+        }
+
+        function loop() {
+            if (gameState === 'PLAYING') {
+                let targetCamX = player.x - (canvasWidth / 2) + (STAIR_WIDTH / 2);
+                let targetCamY = player.y - (canvasHeight * 0.6);
+                cameraX += (targetCamX - cameraX) * 0.1;
+                cameraY += (targetCamY - cameraY) * 0.1;
+            }
+
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function draw() {
+            updateAndDrawBackground();
+
+            ctx.save();
+            ctx.translate(-cameraX, -cameraY);
+
+            const startIdx = Math.max(0, player.idx - 8);
+            const endIdx = Math.min(stairs.length, player.idx + 35);
+
+            for (let i = startIdx; i < endIdx; i++) {
+                let s = stairs[i];
+
+                // 그림자
+                ctx.fillStyle = "rgba(0,0,0,0.1)";
+                ctx.fillRect(s.x + 3, s.y + 3, STAIR_WIDTH, STAIR_HEIGHT);
+
+                // 계단 본체
+                ctx.fillStyle = (i % 2 === 0) ? "#FFFFFF" : "#F5F5F5";
+                if (i > player.idx) ctx.fillStyle = "#FFF";
+                roundRect(ctx, s.x, s.y, STAIR_WIDTH, STAIR_HEIGHT, 6, true, false);
+
+                // 일반 코인
+                if (s.hasCoin) {
+                    ctx.fillStyle = "#FFD700";
+                    ctx.beginPath();
+                    ctx.arc(s.x + STAIR_WIDTH / 2, s.y - 10, 6, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                // 💎 [수정됨] 보석 그리기 (엄청 잘 보이게!)
+                if (s.hasJewel) {
+                    // 시간(Date.now)을 이용해 크기가 커졌다 작아졌다 함 (애니메이션)
+                    const time = Date.now() / 200;
+                    const scale = 1 + Math.sin(time) * 0.2; // 0.8 ~ 1.2배 크기 진동
+
+                    ctx.save();
+                    ctx.translate(s.x + STAIR_WIDTH / 2, s.y - 15); // 계단 위로 위치 잡기
+                    ctx.scale(scale, scale); // 크기 조절
+
+                    // 빛나는 효과 (Shadow Glow)
+                    ctx.shadowColor = "cyan";
+                    ctx.shadowBlur = 15;
+
+                    ctx.font = "35px Arial"; // 폰트 크기 키움
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.fillText("💎", 0, 0);
+
+                    ctx.restore();
+                }
+            }
+
+            // 플레이어 그리기
+            const skin = skins[currentSkinIdx];
+            ctx.font = "30px Arial";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "bottom";
+
+            ctx.save();
+            ctx.translate(player.x + STAIR_WIDTH / 2, player.y + 5);
+            ctx.scale(player.dir, 1);
+            ctx.fillText(skin.icon, 0, 0);
+            ctx.restore();
+
+            // 파티클(이펙트 텍스트) 그리기
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color || "black";
+                ctx.font = "bold 20px Arial"; // 글씨 좀 더 굵게
+                ctx.textAlign = "center";
+                ctx.fillText(p.text, p.x + STAIR_WIDTH / 2, p.y);
+                p.y += p.dy;
+                p.life -= 0.02; // 천천히 사라지게
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+            ctx.globalAlpha = 1.0;
+
+            ctx.restore();
+        }
+
+        function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+            ctx.beginPath();
+            ctx.moveTo(x + r, y);
+            ctx.lineTo(x + w - r, y);
+            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+            ctx.lineTo(x + w, y + h - r);
+            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+            ctx.lineTo(x + r, y + h);
+            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+            ctx.lineTo(x, y + r);
+            ctx.quadraticCurveTo(x, y, x + r, y);
+            ctx.closePath();
+            if (fill) ctx.fill();
+            if (stroke) ctx.stroke();
+        }
+
+        const btnTurn = document.getElementById('btnTurn');
+        const btnClimb = document.getElementById('btnClimb');
+
+        function bindButton(btn, action) {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                btn.classList.add('pressed');
+                handleAction(action);
+            }, { passive: false });
+            btn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                btn.classList.remove('pressed');
+            });
+            btn.addEventListener('mousedown', () => {
+                btn.classList.add('pressed');
+                handleAction(action);
+            });
+            btn.addEventListener('mouseup', () => btn.classList.remove('pressed'));
+            btn.addEventListener('mouseleave', () => btn.classList.remove('pressed'));
+        }
+        bindButton(btnTurn, 'TURN');
+        bindButton(btnClimb, 'CLIMB');
+
+        window.addEventListener('keydown', (e) => {
+            if (gameState === 'READY' || gameState === 'PLAYING') {
+                if (e.code === 'ArrowLeft' || e.key === 'z') {
+                    btnTurn.classList.add('pressed');
+                    handleAction('TURN');
+                }
+                if (e.code === 'ArrowRight' || e.key === 'x') {
+                    btnClimb.classList.add('pressed');
+                    handleAction('CLIMB');
+                }
+            } else if (gameState === 'GAMEOVER') {
+                // 게임 오버일 때 키보드 누르면 재시작
+                if (e.code === 'ArrowLeft' || e.key === 'z' || e.code === 'ArrowRight' || e.key === 'x') {
+                    retryGame();
+                }
+            }
+        });
+        window.addEventListener('keyup', () => {
+            btnTurn.classList.remove('pressed');
+            btnClimb.classList.remove('pressed');
+        });
+
+        // 상점 로직
+        function openShop() {
+            els.shop.classList.remove('hidden');
+            els.shopCoins.innerText = coins;
+            renderShopList();
+        }
+
+        function closeShop() {
+            els.shop.classList.add('hidden');
+        }
+
+        function renderShopList() {
+            const list = document.getElementById('shopList');
+            list.innerHTML = '';
+            skins.forEach(skin => {
+                const isUnlocked = unlockedSkins.includes(skin.id);
+                const isEquipped = currentSkinIdx === skin.id;
+                const div = document.createElement('div');
+                div.className = `shop-item ${isUnlocked ? '' : 'locked'} ${isEquipped ? 'active' : ''}`;
+
+                let statusText = isEquipped ? "장착중" : (isUnlocked ? "보유중" : `${skin.price} C`);
+
+                div.innerHTML = `
+                <div class="shop-item-icon">${skin.icon}</div>
+                <div class="shop-item-name">${skin.name}</div>
+                <div class="shop-item-price">${statusText}</div>
+            `;
+
+                div.onclick = () => {
+                    if (isUnlocked) {
+                        currentSkinIdx = skin.id;
+                        localStorage.setItem('equippedSkin', currentSkinIdx);
+                        renderShopList();
+                    } else {
+                        if (coins >= skin.price) {
+                            if (confirm(`${skin.name} 구매할까요?`)) {
+                                coins -= skin.price;
+                                unlockedSkins.push(skin.id);
+                                localStorage.setItem('myCoins', coins);
+                                localStorage.setItem('unlockedSkins', JSON.stringify(unlockedSkins));
+                                els.shopCoins.innerText = coins;
+                                els.coins.innerText = coins; // 메인화면 코인도 갱신
+                                renderShopList();
+                            }
+                        } else { alert("코인이 부족해요!"); }
+                    }
+                };
+                list.appendChild(div);
+            });
+        }
+
+        resize();
+        initGame(); 
+    </script>
 </body>
 
 </html>
